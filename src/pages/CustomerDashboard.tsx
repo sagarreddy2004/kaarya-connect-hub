@@ -133,7 +133,7 @@ const CustomerDashboard = () => {
                       <SelectValue placeholder="Select service" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Services</SelectItem>
+                      <SelectItem value="all">All Services</SelectItem>
                       <SelectItem value="plumber">Plumber</SelectItem>
                       <SelectItem value="electrician">Electrician</SelectItem>
                       <SelectItem value="tutor">Tutor</SelectItem>
