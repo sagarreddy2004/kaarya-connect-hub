@@ -2,41 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Kaarya Connect Design System - Professional yet simple for rural users */
 
 @layer base {
   :root {
+    /* Core brand colors - Blue & Green theme */
+    --primary: 214 88% 46%;          /* Professional blue */
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 214 100% 85%;   /* Light blue for accents */
+    --primary-dark: 214 88% 36%;     /* Darker blue for depth */
+    
+    --success: 142 76% 36%;          /* Trust green */
+    --success-foreground: 0 0% 100%;
+    --success-light: 142 76% 85%;    /* Light green for success states */
+    
+    --warning: 38 92% 50%;           /* Attention orange */
+    --warning-foreground: 0 0% 100%;
+    
+    /* Neutral palette */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
+    --foreground: 224 18% 15%;       /* Dark blue-grey for text */
+    
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
+    --card-foreground: 224 18% 15%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 224 18% 15%;
+    
+    --secondary: 210 20% 96%;        /* Very light grey-blue */
+    --secondary-foreground: 224 18% 15%;
+    
+    --muted: 210 20% 94%;           /* Soft grey for backgrounds */
+    --muted-foreground: 224 12% 55%; /* Medium grey for secondary text */
+    
+    --accent: 214 100% 96%;         /* Very light blue for highlights */
+    --accent-foreground: 214 88% 36%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 214 88% 46%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
+    --radius: 0.75rem;              /* Slightly rounded for modern feel */
+    
+    /* Custom gradients for visual appeal */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-dark)));
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(142 76% 28%));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--success)));
+    
+    /* Shadows for depth */
+    --shadow-soft: 0 2px 8px hsl(var(--primary) / 0.1);
+    --shadow-medium: 0 4px 16px hsl(var(--primary) / 0.15);
+    --shadow-strong: 0 8px 32px hsl(var(--primary) / 0.2);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     --sidebar-background: 0 0% 98%;
 

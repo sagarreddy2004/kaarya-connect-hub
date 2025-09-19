@@ -9,12 +9,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default: "bg-primary text-primary-foreground hover:bg-primary-dark shadow-md hover:shadow-lg transition-all duration-300",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        outline: "border border-primary text-primary bg-background hover:bg-primary hover:text-primary-foreground shadow-sm hover:shadow-md transition-all duration-300",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        hero: "bg-gradient-to-r from-primary to-success text-white hover:shadow-lg hover:scale-105 transform transition-all duration-300 font-semibold",
+        success: "bg-success text-success-foreground hover:bg-success/90 shadow-md hover:shadow-lg transition-all duration-300",
+        worker: "bg-primary text-primary-foreground hover:bg-primary-dark border-2 border-transparent hover:border-primary-light shadow-md hover:shadow-lg transition-all duration-300",
+        customer: "bg-success text-success-foreground hover:bg-success/90 border-2 border-transparent hover:border-success-light shadow-md hover:shadow-lg transition-all duration-300",
       },
       size: {
         default: "h-10 px-4 py-2",
