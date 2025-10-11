@@ -10,6 +10,12 @@ import SignupCustomer from "./pages/SignupCustomer";
 import WorkerDashboard from "./pages/WorkerDashboard";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import NotFound from "./pages/NotFound";
+import Services from "./pages/Services";
+import ServiceDetail from "./pages/ServiceDetail";
+import About from './pages/About';
+import Contact from './pages/Contact';
+import Landing from "./pages/Landing";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 const queryClient = new QueryClient();
 
@@ -22,11 +28,17 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Login />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/signup" element={<SignupCustomer />} />
           <Route path="/signup-worker" element={<SignupWorker />} />
           <Route path="/signup-customer" element={<SignupCustomer />} />
           <Route path="/worker-dashboard" element={<WorkerDashboard />} />
           <Route path="/customer-dashboard" element={<CustomerDashboard />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/services/:id" element={<ServiceDetail />} />
+          <Route path="/landing" element={<Landing />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
