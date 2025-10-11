@@ -5,6 +5,7 @@ dotenv.config();
 export const config = {
   // Database
   DATABASE_URL: process.env.DATABASE_URL,
+  MONGO_URI: "mongodb+srv://vidyasagarreddykarru:SagarReddy2004@cluster0.ot2ef.mongodb.net/kaarya-connect-hub?retryWrites=true&w=majority",
   
   // Server
   PORT: process.env.PORT || 3000,
