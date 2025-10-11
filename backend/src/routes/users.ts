@@ -1,8 +1,11 @@
 import express from 'express';
-import { getUserProfile, updateUserProfile } from '../controllers/userController';
+import { getAllUsers, getUserProfile, updateUserProfile } from '../controllers/userController';
 import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
+
+// Route to get all users
+router.get('/', authenticate, getAllUsers);
 
 // Route to get user profile
 router.get('/profile', authenticate, getUserProfile);

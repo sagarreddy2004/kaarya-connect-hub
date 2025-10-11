@@ -1,6 +1,16 @@
 import { Request, Response } from 'express';
 import UserService from '../services/userService';
 
+// Fetch all users
+export const getAllUsers = async (req: Request, res: Response) => {
+  try {
+    const users = await UserService.getAllUsers();
+    res.status(200).json(users);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 // Fetch user profile
 export const getUserProfile = async (req: Request, res: Response) => {
   try {
@@ -12,7 +22,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
     }
     
     res.status(200).json(user);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -29,7 +39,7 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     }
     
     res.status(200).json(updatedUser);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

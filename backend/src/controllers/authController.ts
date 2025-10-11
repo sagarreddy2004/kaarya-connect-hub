@@ -4,9 +4,10 @@ import { registerUser, loginUser } from '../services/authService';
 // Register a new user
 export const register = async (req: Request, res: Response) => {
   try {
-    const user = await registerUser(req.body);
+    const { email, password, ...userData } = req.body;
+    const user = await registerUser(email, password, userData);
     res.status(201).json({ message: 'User registered successfully', user });
-  } catch (error) {
+  } catch (error: any) {
     res.status(400).json({ message: error.message });
   }
 };
@@ -14,9 +15,10 @@ export const register = async (req: Request, res: Response) => {
 // Login a user
 export const login = async (req: Request, res: Response) => {
   try {
-    const { token, user } = await loginUser(req.body);
+    const { email, password } = req.body;
+    const { token, user } = await loginUser(email, password);
     res.status(200).json({ message: 'Login successful', token, user });
-  } catch (error) {
+  } catch (error: any) {
     res.status(401).json({ message: error.message });
   }
 };

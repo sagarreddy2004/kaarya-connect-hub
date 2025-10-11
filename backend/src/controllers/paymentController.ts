@@ -1,13 +1,13 @@
 import { Request, Response } from 'express';
-import PaymentService from '../services/paymentService';
+import * as PaymentService from '../services/paymentService';
 
 // Process a payment
 export const processPayment = async (req: Request, res: Response) => {
   try {
     const paymentData = req.body;
-    const paymentResult = await PaymentService.processPayment(paymentData);
+    const paymentResult = await PaymentService.createPayment(paymentData);
     res.status(200).json(paymentResult);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ message: 'Payment processing failed', error: error.message });
   }
 };
@@ -16,10 +16,21 @@ export const processPayment = async (req: Request, res: Response) => {
 export const getPaymentHistory = async (req: Request, res: Response) => {
   try {
     const userId = req.params.userId;
-    const paymentHistory = await PaymentService.getPaymentHistory(userId);
+    const paymentHistory = await PaymentService.getPaymentsByCustomer(userId);
     res.status(200).json(paymentHistory);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ message: 'Failed to retrieve payment history', error: error.message });
+  }
+};
+
+// Get payment status
+export const getPaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const paymentId = req.params.paymentId;
+    const payment = await PaymentService.getPaymentById(paymentId);
+    res.status(200).json(payment);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Failed to retrieve payment status', error: error.message });
   }
 };
 
@@ -27,9 +38,9 @@ export const getPaymentHistory = async (req: Request, res: Response) => {
 export const refundPayment = async (req: Request, res: Response) => {
   try {
     const { paymentId } = req.body;
-    const refundResult = await PaymentService.refundPayment(paymentId);
+    const refundResult = await PaymentService.updatePaymentStatus(paymentId, 'refunded');
     res.status(200).json(refundResult);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ message: 'Refund processing failed', error: error.message });
   }
 };

@@ -28,6 +28,31 @@ const userSchema = new Schema({
     required: true,
     trim: true,
   },
+  role: {
+    type: String,
+    enum: ['customer', 'worker'],
+    default: 'customer',
+  },
+  profession: {
+    type: String,
+  },
+  experience: {
+    type: String,
+  },
+  rating: {
+    type: Number,
+    default: 0,
+  },
+  reviewCount: {
+    type: Number,
+    default: 0,
+  },
+  phone: {
+    type: String,
+  },
+  location: {
+    type: String,
+  },
   profilePicture: {
     type: String,
     default: null,
@@ -44,7 +69,7 @@ const userSchema = new Schema({
 
 // Middleware to update the updatedAt field
 userSchema.pre('save', function (next) {
-  this.updatedAt = Date.now();
+  this.updatedAt = new Date();
   next();
 });
 

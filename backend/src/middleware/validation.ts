@@ -41,3 +41,6 @@ export const validateJobCreation = [
     next();
   },
 ];
+
+export const validateJob = validateJobCreation; // Alias
+export const validateReview = validateJobCreation; // Placeholder

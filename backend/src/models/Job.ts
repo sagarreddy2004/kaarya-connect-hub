@@ -21,20 +21,30 @@ const jobSchema = new Schema({
     type: String,
     required: true,
   },
-  postedBy: {
+  customerId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
+  workerId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
   },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
+  status: {
+    type: String,
+    enum: ['open', 'in-progress', 'completed', 'cancelled'],
+    default: 'open',
   },
-});
+  category: {
+    type: String,
+  },
+  budget: {
+    type: Number,
+  },
+  deadline: {
+    type: Date,
+  },
+}, { timestamps: true });
 
 const Job = model('Job', jobSchema);
 

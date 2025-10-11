@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
   Bell, 
@@ -19,46 +21,213 @@ import {
 import Header from "@/components/Header";
 
 const WorkerDashboard = () => {
-  const [jobRequests] = useState([
-    {
-      id: 1,
-      customer: "Priya Sharma",
-      service: "Plumbing",
-      description: "Kitchen sink pipe leakage repair",
-      location: "Sector 15, Chandigarh",
-      timeSlot: "Tomorrow, 2:00 PM",
-      budget: "₹500-800",
-      status: "pending"
-    },
-    {
-      id: 2,
-      customer: "Raj Kumar",
-      service: "Electrical",
-      description: "Fan installation in bedroom",
-      location: "Model Town, Chandigarh",
-      timeSlot: "Today, 4:00 PM",
-      budget: "₹300-500",
-      status: "pending"
-    }
-  ]);
-
-  const [earnings] = useState({
-    thisMonth: 12500,
-    lastMonth: 10800,
-    total: 45600,
-    jobs: 23
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [jobRequests, setJobRequests] = useState<any[]>([]);
+  const [workerProfile, setWorkerProfile] = useState<any>(null);
+  const [earnings, setEarnings] = useState({
+    thisMonth: 0,
+    lastMonth: 0,
+    total: 0,
+    jobs: 0
   });
+  const [isLoading, setIsLoading] = useState(true);
 
-  const workerProfile = {
-    name: "Ramesh Kumar",
-    skill: "Plumber",
-    experience: "8 years",
-    rating: 4.8,
-    reviews: 156,
-    phone: "+91 98765 43210",
-    email: "ramesh.kumar@email.com",
-    location: "Chandigarh, Punjab"
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const user = localStorage.getItem("user");
+
+    if (!token || !user) {
+      navigate("/login");
+      return;
+    }
+
+    const userData = JSON.parse(user);
+    if (userData.role !== "worker") {
+      toast({
+        title: "Access Denied",
+        description: "This page is only for workers",
+        variant: "destructive",
+      });
+      navigate("/customer-dashboard");
+      return;
+    }
+
+    fetchWorkerData(token, userData);
+  }, [navigate, toast]);
+
+  const fetchWorkerData = async (token: string, userData: any) => {
+    try {
+      // Fetch worker jobs
+      const jobsResponse = await fetch("http://localhost:3000/api/jobs", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (jobsResponse.ok) {
+        const jobs = await jobsResponse.json();
+        // Filter jobs for this worker (you may need to adjust based on your job schema)
+        const workerJobs = jobs.filter((job: any) => job.status === "pending" || job.workerId === userData.id);
+        setJobRequests(workerJobs);
+        
+        // Calculate completed jobs for earnings
+        const completedJobs = jobs.filter((job: any) => job.workerId === userData.id && job.status === "completed");
+        setEarnings({
+          thisMonth: 0, // TODO: Calculate based on payment dates
+          lastMonth: 0,
+          total: 0,
+          jobs: completedJobs.length
+        });
+      }
+
+      // Fetch payments/earnings
+      try {
+        const paymentsResponse = await fetch("http://localhost:3000/api/payments", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (paymentsResponse.ok) {
+          const payments = await paymentsResponse.json();
+          const workerPayments = payments.filter((p: any) => p.workerId === userData.id);
+          
+          const now = new Date();
+          const currentMonth = now.getMonth();
+          const currentYear = now.getFullYear();
+          
+          const thisMonthEarnings = workerPayments
+            .filter((p: any) => {
+              const paymentDate = new Date(p.createdAt);
+              return paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear;
+            })
+            .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+          
+          const lastMonthEarnings = workerPayments
+            .filter((p: any) => {
+              const paymentDate = new Date(p.createdAt);
+              const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+              const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+              return paymentDate.getMonth() === lastMonth && paymentDate.getFullYear() === lastMonthYear;
+            })
+            .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+          
+          const totalEarnings = workerPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+          
+          setEarnings({
+            thisMonth: thisMonthEarnings,
+            lastMonth: lastMonthEarnings,
+            total: totalEarnings,
+            jobs: workerPayments.filter((p: any) => p.status === "completed").length
+          });
+        }
+      } catch (paymentError) {
+        console.log("Payments endpoint not available, using default values");
+      }
+
+      // Set worker profile from stored user data
+      setWorkerProfile({
+        name: `${userData.firstName} ${userData.lastName}`,
+        skill: userData.profession || "Service Provider",
+        experience: userData.experience || "N/A",
+        rating: userData.rating || 4.5,
+        reviews: userData.reviewCount || 0,
+        phone: userData.phone || "Not provided",
+        email: userData.email,
+        location: userData.location || "Not provided"
+      });
+
+    } catch (error) {
+      console.error("Error fetching worker data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleAcceptJob = async (jobId: string) => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`http://localhost:3000/api/jobs/${jobId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "accepted" }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Job accepted successfully",
+        });
+        // Refresh job requests
+        const user = localStorage.getItem("user");
+        if (token && user) {
+          fetchWorkerData(token, JSON.parse(user));
+        }
+      } else {
+        throw new Error("Failed to accept job");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to accept job",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeclineJob = async (jobId: string) => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`http://localhost:3000/api/jobs/${jobId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "declined" }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Job declined",
+        });
+        // Refresh job requests
+        const user = localStorage.getItem("user");
+        if (token && user) {
+          fetchWorkerData(token, JSON.parse(user));
+        }
+      } else {
+        throw new Error("Failed to decline job");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to decline job",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading || !workerProfile) {
+    return (
+      <div className="min-h-screen bg-secondary">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-secondary">
@@ -90,7 +259,7 @@ const WorkerDashboard = () => {
                   <Bell className="h-4 w-4 text-warning" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-warning">2</div>
+                  <div className="text-2xl font-bold text-warning">{jobRequests.length}</div>
                   <p className="text-xs text-muted-foreground">New requests today</p>
                 </CardContent>
               </Card>
@@ -125,28 +294,30 @@ const WorkerDashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   {jobRequests.slice(0, 2).map((job) => (
-                    <div key={job.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={job._id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex-1">
-                        <h4 className="font-semibold">{job.service} - {job.customer}</h4>
+                        <h4 className="font-semibold">{job.title || job.category}</h4>
                         <p className="text-sm text-muted-foreground">{job.description}</p>
                         <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <MapPin size={14} />
-                            {job.location}
+                            {job.location || "Not specified"}
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar size={14} />
-                            {job.timeSlot}
+                            {job.date ? new Date(job.date).toLocaleDateString() : "TBD"}
                           </span>
-                          <span className="font-medium text-success">{job.budget}</span>
+                          <span className="font-medium text-success">
+                            ₹{job.budget || job.price || "Negotiable"}
+                          </span>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="success">
+                        <Button size="sm" variant="success" onClick={() => handleAcceptJob(job._id)}>
                           <CheckCircle size={16} className="mr-1" />
                           Accept
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => handleDeclineJob(job._id)}>
                           <X size={16} className="mr-1" />
                           Decline
                         </Button>
@@ -167,34 +338,34 @@ const WorkerDashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   {jobRequests.map((job) => (
-                    <div key={job.id} className="p-4 border rounded-lg">
+                    <div key={job._id} className="p-4 border rounded-lg">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold">{job.service}</h4>
+                            <h4 className="font-semibold">{job.title || job.category}</h4>
                             <Badge variant="outline">{job.status}</Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mb-3">{job.description}</p>
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                              <strong>Customer:</strong> {job.customer}
+                              <strong>Customer:</strong> {job.customerId?.firstName || "N/A"}
                             </div>
                             <div>
-                              <strong>Budget:</strong> {job.budget}
+                              <strong>Budget:</strong> ₹{job.budget || job.price || "Negotiable"}
                             </div>
                             <div className="flex items-center gap-1">
                               <MapPin size={14} />
-                              {job.location}
+                              {job.location || "Not specified"}
                             </div>
                             <div className="flex items-center gap-1">
                               <Calendar size={14} />
-                              {job.timeSlot}
+                              {job.date ? new Date(job.date).toLocaleDateString() : "TBD"}
                             </div>
                           </div>
                         </div>
                         <div className="flex gap-2 ml-4">
-                          <Button variant="success">Accept</Button>
-                          <Button variant="outline">Decline</Button>
+                          <Button variant="success" onClick={() => handleAcceptJob(job._id)}>Accept</Button>
+                          <Button variant="outline" onClick={() => handleDeclineJob(job._id)}>Decline</Button>
                         </div>
                       </div>
                     </div>

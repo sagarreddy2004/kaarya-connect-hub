@@ -1,13 +1,17 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { User } from '../models/User';
-import { AuthConfig } from '../config/auth';
+import User from '../models/User';
+import authConfig from '../config/auth';
 
 const saltRounds = 10;
 
-export const registerUser = async (email: string, password: string) => {
+export const registerUser = async (email: string, password: string, userData: any) => {
   const hashedPassword = await bcrypt.hash(password, saltRounds);
-  const newUser = new User({ email, password: hashedPassword });
+  const newUser = new User({ 
+    email, 
+    password: hashedPassword,
+    ...userData 
+  });
   return await newUser.save();
 };
 
@@ -22,8 +26,12 @@ export const loginUser = async (email: string, password: string) => {
     throw new Error('Invalid credentials');
   }
 
-  const token = jwt.sign({ id: user._id }, AuthConfig.jwtSecret, { expiresIn: AuthConfig.tokenExpiration });
-  return { token, user };
+  const token = jwt.sign(
+    { id: user._id.toString() }, 
+    authConfig.jwtSecret, 
+    { expiresIn: '24h' }
+  );
+  return { token, user: { ...user.toObject(), password: undefined } };
 };
 
 export const hashPassword = async (password: string) => {
@@ -31,5 +39,5 @@ export const hashPassword = async (password: string) => {
 };
 
 export const verifyToken = (token: string) => {
-  return jwt.verify(token, AuthConfig.jwtSecret);
+  return jwt.verify(token, authConfig.jwtSecret);
 };

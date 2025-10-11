@@ -1,33 +1,32 @@
-import { Sequelize } from 'sequelize';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Using your Aiven MySQL connection string
-const database = new Sequelize(process.env.DATABASE_URL as string, {
-  dialect: 'mysql',
-  logging: false, // set to true for SQL query logging
-  dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false
-    }
-  },
-  pool: {
-    max: 10,
-    min: 0,
-    acquire: 30000,
-    idle: 10000
-  }
-});
-
-const testConnection = async () => {
+const connectDB = async () => {
   try {
-    await database.authenticate();
-    console.log('Database connection has been established successfully.');
+    const mongoUri = process.env.MONGO_URI as string;
+    
+    if (!mongoUri) {
+      throw new Error('MONGO_URI is not defined in environment variables');
+    }
+
+    await mongoose.connect(mongoUri);
+    
+    console.log('MongoDB connected successfully');
+    
+    mongoose.connection.on('error', (error) => {
+      console.error('MongoDB connection error:', error);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.log('MongoDB disconnected');
+    });
+
   } catch (error) {
-    console.error('Unable to connect to the database:', error);
+    console.error('MongoDB connection error:', error);
+    process.exit(1);
   }
 };
 
-export { database, testConnection };
+export default connectDB;

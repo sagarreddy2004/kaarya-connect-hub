@@ -8,7 +8,9 @@ import jobRoutes from './routes/jobs';
 import reviewRoutes from './routes/reviews';
 import paymentRoutes from './routes/payments';
 import errorHandler from './middleware/errorHandler';
+import connectDB from "./config/database";
 
+connectDB();
 const app = express();
 
 // Middleware

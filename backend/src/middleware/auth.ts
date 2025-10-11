@@ -9,11 +9,13 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     return res.sendStatus(401); // Unauthorized
   }
 
-  jwt.verify(token, config.jwtSecret, (err, user) => {
+  jwt.verify(token, config.JWT_SECRET as string, (err: any, user: any) => {
     if (err) {
       return res.sendStatus(403); // Forbidden
     }
-    req.user = user;
+    (req as any).user = user;
     next();
   });
 };
+
+export const authenticate = authenticateToken; // Alias for compatibility

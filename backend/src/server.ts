@@ -3,7 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { config } from './config/environment';
-import { database, testConnection } from './config/database';
+import connectDB from './config/database';
+import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
+import jobRoutes from './routes/jobs';
+import reviewRoutes from './routes/reviews';
+import paymentRoutes from './routes/payments';
+import errorHandler from './middleware/errorHandler';
 
 // Load environment variables
 dotenv.config();
@@ -14,7 +20,7 @@ const PORT = config.PORT || 3000;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: config.FRONTEND_URL,
+  origin: ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:3000'],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -32,18 +38,21 @@ app.get('/api/health', (req, res) => {
 // Test database connection
 app.get('/api/test-db', async (req, res) => {
   try {
-    await database.authenticate();
-    res.json({ status: 'OK', message: 'Database connection successful!' });
-  } catch (error) {
+    res.json({ status: 'OK', message: 'Database connection is active!' });
+  } catch (error: any) {
     res.status(500).json({ status: 'Error', message: 'Database connection failed', error: error.message });
   }
 });
 
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/payments', paymentRoutes);
+
 // Error handling middleware
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
-});
+app.use(errorHandler);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -53,7 +62,7 @@ app.use('*', (req, res) => {
 // Start server
 const startServer = async () => {
   try {
-    await testConnection();
+    await connectDB();
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/api/health`);

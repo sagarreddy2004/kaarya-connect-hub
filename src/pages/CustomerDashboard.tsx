@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Search, 
   Star, 
@@ -22,66 +24,118 @@ import {
 import Header from "@/components/Header";
 
 const CustomerDashboard = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedService, setSelectedService] = useState("");
+  const [workers, setWorkers] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [workers] = useState([
-    {
-      id: 1,
-      name: "Ramesh Kumar",
-      skill: "Plumber",
-      rating: 4.8,
-      reviews: 156,
-      experience: "8 years",
-      location: "2.3 km away",
-      price: "₹300-500/hour",
-      available: true,
-      avatar: "RK"
-    },
-    {
-      id: 2,
-      name: "Suresh Electrician",
-      skill: "Electrician",
-      rating: 4.6,
-      reviews: 89,
-      experience: "5 years",
-      location: "1.8 km away",
-      price: "₹250-400/hour",
-      available: true,
-      avatar: "SE"
-    },
-    {
-      id: 3,
-      name: "Priya Tutors",
-      skill: "Math Tutor",
-      rating: 4.9,
-      reviews: 234,
-      experience: "6 years",
-      location: "0.8 km away",
-      price: "₹200-350/hour",
-      available: false,
-      avatar: "PT"
-    }
-  ]);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const user = localStorage.getItem("user");
 
-  const [bookings] = useState([
-    {
-      id: 1,
-      worker: "Ramesh Kumar",
-      service: "Plumbing",
-      date: "Today, 2:00 PM",
-      status: "confirmed",
-      address: "123 Model Town, Chandigarh"
-    },
-    {
-      id: 2,
-      worker: "Suresh Electrician",
-      service: "Electrical",
-      date: "Tomorrow, 10:00 AM",
-      status: "pending",
-      address: "456 Sector 15, Chandigarh"
+    if (!token || !user) {
+      navigate("/login");
+      return;
     }
-  ]);
+
+    const userData = JSON.parse(user);
+    if (userData.role !== "customer") {
+      toast({
+        title: "Access Denied",
+        description: "This page is only for customers",
+        variant: "destructive",
+      });
+      navigate("/worker-dashboard");
+      return;
+    }
+
+    fetchCustomerData(token);
+  }, [navigate, toast]);
+
+  const fetchCustomerData = async (token: string) => {
+    try {
+      // Fetch all users with role 'worker'
+      const workersResponse = await fetch("http://localhost:3000/api/users", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (workersResponse.ok) {
+        const allUsers = await workersResponse.json();
+        // Filter for workers only if the endpoint returns all users
+        const workersList = allUsers.filter((u: any) => u.role === "worker");
+        setWorkers(workersList);
+      }
+
+      // Fetch customer's jobs/bookings
+      const jobsResponse = await fetch("http://localhost:3000/api/jobs", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (jobsResponse.ok) {
+        const jobs = await jobsResponse.json();
+        setBookings(jobs);
+      }
+
+    } catch (error) {
+      console.error("Error fetching customer data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBookWorker = async (workerId: string) => {
+    const token = localStorage.getItem("token");
+    const user = localStorage.getItem("user");
+    
+    if (!token || !user) return;
+
+    const userData = JSON.parse(user);
+
+    try {
+      const response = await fetch("http://localhost:3000/api/jobs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          customerId: userData.id,
+          workerId: workerId,
+          title: "Service Request",
+          description: "Customer service request",
+          status: "pending",
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Booking request sent successfully",
+        });
+        fetchCustomerData(token);
+      } else {
+        throw new Error("Failed to book worker");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send booking request",
+        variant: "destructive",
+      });
+    }
+  };
 
   const services = [
     { name: "Plumber", icon: Wrench },
@@ -89,6 +143,26 @@ const CustomerDashboard = () => {
     { name: "Tutor", icon: BookOpen },
     { name: "Painter", icon: Paintbrush }
   ];
+
+  const filteredWorkers = workers.filter((worker) => {
+    const matchesSearch = worker.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          worker.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          worker.profession?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesService = !selectedService || selectedService === "all" || 
+                          worker.profession?.toLowerCase() === selectedService.toLowerCase();
+    return matchesSearch && matchesService;
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-secondary">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-secondary">
@@ -157,54 +231,68 @@ const CustomerDashboard = () => {
 
             {/* Workers List */}
             <div className="space-y-4">
-              {workers.map((worker) => (
-                <Card key={worker.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4">
-                        <div className="w-16 h-16 bg-gradient-to-r from-primary to-success rounded-full flex items-center justify-center">
-                          <span className="text-white font-semibold">{worker.avatar}</span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-lg font-semibold">{worker.name}</h3>
-                            {worker.available ? (
+              {filteredWorkers.length > 0 ? (
+                filteredWorkers.map((worker) => (
+                  <Card key={worker._id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-4">
+                          <div className="w-16 h-16 bg-gradient-to-r from-primary to-success rounded-full flex items-center justify-center">
+                            <span className="text-white font-semibold">
+                              {worker.firstName?.[0]}{worker.lastName?.[0]}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-lg font-semibold">
+                                {worker.firstName} {worker.lastName}
+                              </h3>
                               <Badge variant="default" className="bg-success">Available</Badge>
-                            ) : (
-                              <Badge variant="outline">Busy</Badge>
-                            )}
-                          </div>
-                          <p className="text-muted-foreground mb-2">{worker.skill} • {worker.experience}</p>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Star size={14} className="text-warning fill-current" />
-                              <span className="font-medium">{worker.rating}</span>
-                              <span>({worker.reviews})</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin size={14} />
-                              <span>{worker.location}</span>
-                            </div>
-                            <div className="font-medium text-success">
-                              {worker.price}
+                            <p className="text-muted-foreground mb-2">
+                              {worker.profession || "Service Provider"} • {worker.experience || "N/A"}
+                            </p>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Star size={14} className="text-warning fill-current" />
+                                <span className="font-medium">{worker.rating || 4.5}</span>
+                                <span>({worker.reviewCount || 0})</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MapPin size={14} />
+                                <span>{worker.location || "Not specified"}</span>
+                              </div>
+                              <div className="font-medium text-success">
+                                ₹{worker.hourlyRate || "300-500"}/hour
+                              </div>
                             </div>
                           </div>
                         </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm">
+                            <Phone size={16} className="mr-1" />
+                            Call
+                          </Button>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => handleBookWorker(worker._id)}
+                          >
+                            <Calendar size={16} className="mr-1" />
+                            Book Now
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          <Phone size={16} className="mr-1" />
-                          Call
-                        </Button>
-                        <Button variant="default" size="sm" disabled={!worker.available}>
-                          <Calendar size={16} className="mr-1" />
-                          Book Now
-                        </Button>
-                      </div>
-                    </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    <p>No workers found matching your criteria.</p>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
           </TabsContent>
 
@@ -216,45 +304,53 @@ const CustomerDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {bookings.map((booking) => (
-                    <div key={booking.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold">{booking.service}</h4>
-                            <Badge 
-                              variant={booking.status === 'confirmed' ? 'default' : 'outline'}
-                              className={booking.status === 'confirmed' ? 'bg-success' : ''}
-                            >
-                              {booking.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-1">
-                            Worker: {booking.worker}
-                          </p>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Clock size={14} />
-                              {booking.date}
+                  {bookings.length > 0 ? (
+                    bookings.map((booking) => (
+                      <div key={booking._id} className="p-4 border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-semibold">{booking.title || booking.category}</h4>
+                              <Badge 
+                                variant={booking.status === 'accepted' || booking.status === 'confirmed' ? 'default' : 'outline'}
+                                className={booking.status === 'accepted' || booking.status === 'confirmed' ? 'bg-success' : ''}
+                              >
+                                {booking.status}
+                              </Badge>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin size={14} />
-                              {booking.address}
+                            <p className="text-sm text-muted-foreground mb-1">
+                              Worker: {booking.workerId?.firstName} {booking.workerId?.lastName}
+                            </p>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Clock size={14} />
+                                {booking.date ? new Date(booking.date).toLocaleString() : "TBD"}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MapPin size={14} />
+                                {booking.location || "Not specified"}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <MessageCircle size={16} className="mr-1" />
-                            Chat
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Reschedule
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm">
+                              <MessageCircle size={16} className="mr-1" />
+                              Chat
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              Reschedule
+                            </Button>
+                          </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Calendar size={48} className="mx-auto mb-4 opacity-50" />
+                      <p>No bookings yet.</p>
+                      <p className="text-sm">Book a worker to get started.</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
