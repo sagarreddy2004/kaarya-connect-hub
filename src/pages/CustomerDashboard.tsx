@@ -53,51 +53,53 @@ const CustomerDashboard = () => {
       return;
     }
 
-    fetchCustomerData(token);
+    fetchCustomerData();
   }, [navigate, toast]);
 
-const fetchCustomerData = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
-    // Fetch workers
-    const workersResponse = await fetch(`${API_URL}/api/users`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
+  const fetchCustomerData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
       }
-    });
-    
-    if (workersResponse.ok) {
-      const usersData = await workersResponse.json();
-      const workersData = usersData.filter((user: any) => user.role === 'worker');
-      setWorkers(workersData);
-    }
 
-    // Fetch bookings
-    const bookingsResponse = await fetch(`${API_URL}/api/jobs`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
+      // Fetch workers
+      const workersResponse = await fetch(`${API_URL}/api/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (workersResponse.ok) {
+        const usersData = await workersResponse.json();
+        const workersData = usersData.filter((user: any) => user.role === 'worker');
+        setWorkers(workersData);
       }
-    });
-    
-    if (bookingsResponse.ok) {
-      const bookingsData = await bookingsResponse.json();
-      setBookings(bookingsData);
-    }
 
-  } catch (error) {
-    console.error('Error fetching customer data:', error);
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: "Failed to load dashboard data"
-    });
-  }
-};
+      // Fetch bookings
+      const bookingsResponse = await fetch(`${API_URL}/api/jobs`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (bookingsResponse.ok) {
+        const bookingsData = await bookingsResponse.json();
+        setBookings(bookingsData);
+      }
+
+    } catch (error) {
+      console.error('Error fetching customer data:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load dashboard data"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
 const handleBookWorker = async (workerId: string) => {
   try {

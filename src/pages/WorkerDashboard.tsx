@@ -54,75 +54,90 @@ const WorkerDashboard = () => {
       return;
     }
 
-    fetchWorkerData(token, userData);
+    // Set worker profile from stored user data
+    setWorkerProfile({
+      name: `${userData.firstName} ${userData.lastName}`,
+      skill: userData.profession || "Service Provider",
+      experience: userData.experience || "N/A",
+      rating: userData.rating || 4.5,
+      reviews: userData.reviewCount || 0,
+      phone: userData.phone || "Not provided",
+      email: userData.email,
+      location: userData.location || "Not provided"
+    });
+
+    fetchWorkerData();
   }, [navigate, toast]);
 
- const fetchWorkerData = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
-    // Fetch jobs
-    const jobsResponse = await fetch(`${API_URL}/api/jobs`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (jobsResponse.ok) {
-      const jobsData = await jobsResponse.json();
-      setJobRequests(jobsData);
-    }
-
-    // Fetch payments for earnings
+  const fetchWorkerData = async () => {
     try {
-      const paymentsResponse = await fetch(`${API_URL}/api/payments`, {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      // Fetch jobs
+      const jobsResponse = await fetch(`${API_URL}/api/jobs`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
-      if (paymentsResponse.ok) {
-        const paymentsData = await paymentsResponse.json();
-        
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-        
-        const thisMonthEarnings = paymentsData
-          .filter((p: any) => new Date(p.createdAt).getMonth() === currentMonth)
-          .reduce((sum: number, p: any) => sum + p.amount, 0);
-        
-        const lastMonthEarnings = paymentsData
-          .filter((p: any) => new Date(p.createdAt).getMonth() === lastMonth)
-          .reduce((sum: number, p: any) => sum + p.amount, 0);
-        
-        const totalEarnings = paymentsData.reduce((sum: number, p: any) => sum + p.amount, 0);
-        const completedJobs = jobsData.filter((j: any) => j.status === 'completed').length;
-        
-        setEarnings({
-          thisMonth: thisMonthEarnings,
-          lastMonth: lastMonthEarnings,
-          total: totalEarnings,
-          jobs: completedJobs
-        });
+      let jobsData: any[] = [];
+      if (jobsResponse.ok) {
+        jobsData = await jobsResponse.json();
+        setJobRequests(jobsData);
       }
-    } catch (error) {
-      console.log('Could not fetch payments, using default earnings');
-    }
 
-  } catch (error) {
-    console.error('Error fetching worker data:', error);
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: "Failed to load dashboard data"
-    });
-  }
-};
+      // Fetch payments for earnings
+      try {
+        const paymentsResponse = await fetch(`${API_URL}/api/payments`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (paymentsResponse.ok) {
+          const paymentsData = await paymentsResponse.json();
+          
+          const now = new Date();
+          const currentMonth = now.getMonth();
+          const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+          
+          const thisMonthEarnings = paymentsData
+            .filter((p: any) => new Date(p.createdAt).getMonth() === currentMonth)
+            .reduce((sum: number, p: any) => sum + p.amount, 0);
+          
+          const lastMonthEarnings = paymentsData
+            .filter((p: any) => new Date(p.createdAt).getMonth() === lastMonth)
+            .reduce((sum: number, p: any) => sum + p.amount, 0);
+          
+          const totalEarnings = paymentsData.reduce((sum: number, p: any) => sum + p.amount, 0);
+          const completedJobs = jobsData.filter((j: any) => j.status === 'completed').length;
+          
+          setEarnings({
+            thisMonth: thisMonthEarnings,
+            lastMonth: lastMonthEarnings,
+            total: totalEarnings,
+            jobs: completedJobs
+          });
+        }
+      } catch (error) {
+        console.log('Could not fetch payments, using default earnings');
+      }
+
+    } catch (error) {
+      console.error('Error fetching worker data:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load dashboard data"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
 const handleAcceptJob = async (jobId: string) => {
   try {
