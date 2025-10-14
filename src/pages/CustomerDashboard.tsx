@@ -28,7 +28,7 @@ const CustomerDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedService, setSelectedService] = useState("");
+  const [selectedService, setSelectedService] = useState("all");
   const [workers, setWorkers] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,8 +77,15 @@ const CustomerDashboard = () => {
         setWorkers(workersData);
       }
 
-      // Fetch bookings
-      const bookingsResponse = await fetch(`${API_URL}/api/jobs`, {
+      // Fetch bookings for this customer only
+      const user = localStorage.getItem('user');
+      let currentUserId: string | undefined;
+      if (user) {
+        const u = JSON.parse(user);
+        currentUserId = u._id || u.id;
+      }
+
+      const bookingsResponse = await fetch(`${API_URL}/api/jobs/customer/${currentUserId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -101,38 +108,63 @@ const CustomerDashboard = () => {
     }
   };
 
-const handleBookWorker = async (workerId: string) => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/jobs`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        workerId,
-        title: 'New Job Request',
-        description: 'Job request from customer',
-        status: 'pending'
-      })
-    });
+  const handleBookWorker = async (workerId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      
+      if (!token || !user) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Please login to book a worker"
+        });
+        return;
+      }
 
-    if (response.ok) {
-      toast({
-        title: "Success!",
-        description: "Worker booked successfully"
+      const userData = JSON.parse(user);
+      const customerId = userData._id || userData.id;
+
+      console.log('Booking worker:', { customerId, workerId, userData });
+
+      const response = await fetch(`${API_URL}/api/jobs`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          customerId,
+          workerId,
+            // Basic booking fields - location/budget optional
+          title: 'Service Booking',
+          description: `Booking request from customer ${userData.firstName || ''}`,
+          status: 'pending',
+          category: 'Service Request'
+        })
       });
-      fetchCustomerData();
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Job created:', data);
+        toast({
+          title: "Success!",
+          description: "Worker booked successfully"
+        });
+        fetchCustomerData();
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to book worker');
+      }
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to book worker"
+      });
     }
-  } catch (error) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: "Failed to book worker"
-    });
-  }
-};
+  };
   const services = [
     { name: "Plumber", icon: Wrench },
     { name: "Electrician", icon: Zap },
@@ -144,8 +176,12 @@ const handleBookWorker = async (workerId: string) => {
     const matchesSearch = worker.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           worker.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           worker.profession?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesService = !selectedService || selectedService === "all" || 
+    
+    // Fix: Compare lowercase values and handle "all" case properly
+    const matchesService = !selectedService || 
+                          selectedService === "all" || 
                           worker.profession?.toLowerCase() === selectedService.toLowerCase();
+    
     return matchesSearch && matchesService;
   });
 
@@ -200,21 +236,27 @@ const handleBookWorker = async (workerId: string) => {
                   </div>
                   <Select value={selectedService} onValueChange={setSelectedService}>
                     <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Select service" />
+                      <SelectValue placeholder="All Services" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Services</SelectItem>
-                      <SelectItem value="plumber">Plumber</SelectItem>
-                      <SelectItem value="electrician">Electrician</SelectItem>
-                      <SelectItem value="tutor">Tutor</SelectItem>
-                      <SelectItem value="painter">Painter</SelectItem>
+                      <SelectItem value="Plumber">Plumber</SelectItem>
+                      <SelectItem value="Electrician">Electrician</SelectItem>
+                      <SelectItem value="Tutor">Tutor</SelectItem>
+                      <SelectItem value="Painter">Painter</SelectItem>
+                      <SelectItem value="Carpenter">Carpenter</SelectItem>
+                      <SelectItem value="Cleaner">Cleaner</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {services.map((service) => (
-                    <Card key={service.name} className="cursor-pointer hover:shadow-md transition-shadow">
+                    <Card 
+                      key={service.name} 
+                      className="cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => setSelectedService(service.name)}
+                    >
                       <CardContent className="p-4 text-center">
                         <service.icon className="w-8 h-8 mx-auto mb-2 text-primary" />
                         <p className="text-sm font-medium">{service.name}</p>

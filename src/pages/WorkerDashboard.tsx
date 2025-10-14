@@ -72,18 +72,23 @@ const WorkerDashboard = () => {
   const fetchWorkerData = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
+      const user = localStorage.getItem('user');
+      
+      if (!token || !user) {
         navigate('/login');
         return;
       }
 
-      // Fetch jobs
-      const jobsResponse = await fetch(`${API_URL}/api/jobs`, {
+      const userData = JSON.parse(user);
+
+      // Fetch jobs directly for this worker
+      const workerId = userData._id || userData.id;
+      const jobsResponse = await fetch(`${API_URL}/api/jobs/worker/${workerId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       let jobsData: any[] = [];
       if (jobsResponse.ok) {
         jobsData = await jobsResponse.json();
@@ -142,8 +147,8 @@ const WorkerDashboard = () => {
 const handleAcceptJob = async (jobId: string) => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/jobs/${jobId}`, {
-      method: 'PUT',
+    const response = await fetch(`${API_URL}/api/jobs/${jobId}/status`, {
+      method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -170,8 +175,8 @@ const handleAcceptJob = async (jobId: string) => {
 const handleDeclineJob = async (jobId: string) => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/jobs/${jobId}`, {
-      method: 'PUT',
+    const response = await fetch(`${API_URL}/api/jobs/${jobId}/status`, {
+      method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'

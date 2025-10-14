@@ -28,10 +28,14 @@ export const deleteJob = async (jobId: string) => {
 
 // Get jobs by customer
 export const getJobsByCustomer = async (customerId: string) => {
-  return await Job.find({ customerId }).populate('workerId', 'username email firstName lastName');
+  return await Job.find({ customerId })
+    .populate('workerId', 'username email firstName lastName')
+    .populate('customerId', 'username email firstName lastName');
 };
 
 // Get jobs by worker
 export const getJobsByWorker = async (workerId: string) => {
-  return await Job.find({ workerId }).populate('customerId', 'username email firstName lastName');
+  return await Job.find({ workerId })
+    .populate('customerId', 'username email firstName lastName')
+    .populate('workerId', 'username email firstName lastName');
 };
