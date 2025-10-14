@@ -1,4 +1,12 @@
-import Header from "@/components/Header";
+app.use(cors({
+  origin: [
+    'https://kaarya-connect-hub.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:8080',
+    'http://localhost:8081'
+  ],
+  credentials: true
+}));import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Target, Award, Heart } from "lucide-react";

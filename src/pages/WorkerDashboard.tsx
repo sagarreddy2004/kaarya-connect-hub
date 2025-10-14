@@ -18,6 +18,7 @@ import {
   Clock,
   X
 } from "lucide-react";
+import { API_URL } from "@/config/api";
 import Header from "@/components/Header";
 
 const WorkerDashboard = () => {
@@ -56,167 +57,128 @@ const WorkerDashboard = () => {
     fetchWorkerData(token, userData);
   }, [navigate, toast]);
 
-  const fetchWorkerData = async (token: string, userData: any) => {
-    try {
-      // Fetch worker jobs
-      const jobsResponse = await fetch("http://localhost:3000/api/jobs", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+ const fetchWorkerData = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
 
-      if (jobsResponse.ok) {
-        const jobs = await jobsResponse.json();
-        // Filter jobs for this worker (you may need to adjust based on your job schema)
-        const workerJobs = jobs.filter((job: any) => job.status === "pending" || job.workerId === userData.id);
-        setJobRequests(workerJobs);
+    // Fetch jobs
+    const jobsResponse = await fetch(`${API_URL}/api/jobs`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (jobsResponse.ok) {
+      const jobsData = await jobsResponse.json();
+      setJobRequests(jobsData);
+    }
+
+    // Fetch payments for earnings
+    try {
+      const paymentsResponse = await fetch(`${API_URL}/api/payments`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (paymentsResponse.ok) {
+        const paymentsData = await paymentsResponse.json();
         
-        // Calculate completed jobs for earnings
-        const completedJobs = jobs.filter((job: any) => job.workerId === userData.id && job.status === "completed");
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        
+        const thisMonthEarnings = paymentsData
+          .filter((p: any) => new Date(p.createdAt).getMonth() === currentMonth)
+          .reduce((sum: number, p: any) => sum + p.amount, 0);
+        
+        const lastMonthEarnings = paymentsData
+          .filter((p: any) => new Date(p.createdAt).getMonth() === lastMonth)
+          .reduce((sum: number, p: any) => sum + p.amount, 0);
+        
+        const totalEarnings = paymentsData.reduce((sum: number, p: any) => sum + p.amount, 0);
+        const completedJobs = jobsData.filter((j: any) => j.status === 'completed').length;
+        
         setEarnings({
-          thisMonth: 0, // TODO: Calculate based on payment dates
-          lastMonth: 0,
-          total: 0,
-          jobs: completedJobs.length
+          thisMonth: thisMonthEarnings,
+          lastMonth: lastMonthEarnings,
+          total: totalEarnings,
+          jobs: completedJobs
         });
-      }
-
-      // Fetch payments/earnings
-      try {
-        const paymentsResponse = await fetch("http://localhost:3000/api/payments", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (paymentsResponse.ok) {
-          const payments = await paymentsResponse.json();
-          const workerPayments = payments.filter((p: any) => p.workerId === userData.id);
-          
-          const now = new Date();
-          const currentMonth = now.getMonth();
-          const currentYear = now.getFullYear();
-          
-          const thisMonthEarnings = workerPayments
-            .filter((p: any) => {
-              const paymentDate = new Date(p.createdAt);
-              return paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear;
-            })
-            .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-          
-          const lastMonthEarnings = workerPayments
-            .filter((p: any) => {
-              const paymentDate = new Date(p.createdAt);
-              const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-              const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-              return paymentDate.getMonth() === lastMonth && paymentDate.getFullYear() === lastMonthYear;
-            })
-            .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-          
-          const totalEarnings = workerPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-          
-          setEarnings({
-            thisMonth: thisMonthEarnings,
-            lastMonth: lastMonthEarnings,
-            total: totalEarnings,
-            jobs: workerPayments.filter((p: any) => p.status === "completed").length
-          });
-        }
-      } catch (paymentError) {
-        console.log("Payments endpoint not available, using default values");
-      }
-
-      // Set worker profile from stored user data
-      setWorkerProfile({
-        name: `${userData.firstName} ${userData.lastName}`,
-        skill: userData.profession || "Service Provider",
-        experience: userData.experience || "N/A",
-        rating: userData.rating || 4.5,
-        reviews: userData.reviewCount || 0,
-        phone: userData.phone || "Not provided",
-        email: userData.email,
-        location: userData.location || "Not provided"
-      });
-
-    } catch (error) {
-      console.error("Error fetching worker data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load dashboard data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAcceptJob = async (jobId: string) => {
-    const token = localStorage.getItem("token");
-    try {
-      const response = await fetch(`http://localhost:3000/api/jobs/${jobId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: "accepted" }),
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Job accepted successfully",
-        });
-        // Refresh job requests
-        const user = localStorage.getItem("user");
-        if (token && user) {
-          fetchWorkerData(token, JSON.parse(user));
-        }
-      } else {
-        throw new Error("Failed to accept job");
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to accept job",
-        variant: "destructive",
-      });
+      console.log('Could not fetch payments, using default earnings');
     }
-  };
 
-  const handleDeclineJob = async (jobId: string) => {
-    const token = localStorage.getItem("token");
-    try {
-      const response = await fetch(`http://localhost:3000/api/jobs/${jobId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: "declined" }),
-      });
+  } catch (error) {
+    console.error('Error fetching worker data:', error);
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to load dashboard data"
+    });
+  }
+};
 
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Job declined",
-        });
-        // Refresh job requests
-        const user = localStorage.getItem("user");
-        if (token && user) {
-          fetchWorkerData(token, JSON.parse(user));
-        }
-      } else {
-        throw new Error("Failed to decline job");
-      }
-    } catch (error) {
+const handleAcceptJob = async (jobId: string) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/jobs/${jobId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: 'accepted' })
+    });
+
+    if (response.ok) {
       toast({
-        title: "Error",
-        description: "Failed to decline job",
-        variant: "destructive",
+        title: "Success!",
+        description: "Job request accepted"
       });
+      fetchWorkerData();
     }
-  };
+  } catch (error) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to accept job"
+    });
+  }
+};
+
+const handleDeclineJob = async (jobId: string) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/jobs/${jobId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: 'declined' })
+    });
+
+    if (response.ok) {
+      toast({
+        title: "Success!",
+        description: "Job request declined"
+      });
+      fetchWorkerData();
+    }
+  } catch (error) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to decline job"
+    });
+  }
+};
 
   if (isLoading || !workerProfile) {
     return (

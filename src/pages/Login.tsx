@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate,Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
+import { API_URL } from "@/config/api";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const Login = () => {
 
     try {
       // Call backend API
-      const response = await fetch('http://localhost:3000/api/auth/login', {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +154,7 @@ const Login = () => {
             <div className="mt-6 text-center">
               <p className="text-muted-foreground">
                 Don't have an account?{" "}
-                <Link to="/signup" className="text-primary hover:underline font-medium">
+                <Link to="/signup-customer" className="text-primary hover:underline font-medium">
                   Sign up here
                 </Link>
               </p>

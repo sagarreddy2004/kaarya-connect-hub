@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, User, Mail, Phone, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { API_URL } from "@/config/api";
 import Header from "@/components/Header";
 
 const SignupCustomer = () => {
@@ -48,7 +49,7 @@ const SignupCustomer = () => {
 
     try {
       // Call backend API
-      const response = await fetch('http://localhost:3000/api/auth/register', {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

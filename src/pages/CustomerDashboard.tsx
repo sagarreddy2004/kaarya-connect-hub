@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { API_URL } from "@/config/api";
 import { 
   Search, 
   Star, 
@@ -55,88 +56,81 @@ const CustomerDashboard = () => {
     fetchCustomerData(token);
   }, [navigate, toast]);
 
-  const fetchCustomerData = async (token: string) => {
-    try {
-      // Fetch all users with role 'worker'
-      const workersResponse = await fetch("http://localhost:3000/api/users", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (workersResponse.ok) {
-        const allUsers = await workersResponse.json();
-        // Filter for workers only if the endpoint returns all users
-        const workersList = allUsers.filter((u: any) => u.role === "worker");
-        setWorkers(workersList);
-      }
-
-      // Fetch customer's jobs/bookings
-      const jobsResponse = await fetch("http://localhost:3000/api/jobs", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (jobsResponse.ok) {
-        const jobs = await jobsResponse.json();
-        setBookings(jobs);
-      }
-
-    } catch (error) {
-      console.error("Error fetching customer data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load dashboard data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+const fetchCustomerData = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
     }
-  };
 
-  const handleBookWorker = async (workerId: string) => {
-    const token = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
+    // Fetch workers
+    const workersResponse = await fetch(`${API_URL}/api/users`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
     
-    if (!token || !user) return;
-
-    const userData = JSON.parse(user);
-
-    try {
-      const response = await fetch("http://localhost:3000/api/jobs", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          customerId: userData.id,
-          workerId: workerId,
-          title: "Service Request",
-          description: "Customer service request",
-          status: "pending",
-        }),
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Booking request sent successfully",
-        });
-        fetchCustomerData(token);
-      } else {
-        throw new Error("Failed to book worker");
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to send booking request",
-        variant: "destructive",
-      });
+    if (workersResponse.ok) {
+      const usersData = await workersResponse.json();
+      const workersData = usersData.filter((user: any) => user.role === 'worker');
+      setWorkers(workersData);
     }
-  };
 
+    // Fetch bookings
+    const bookingsResponse = await fetch(`${API_URL}/api/jobs`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (bookingsResponse.ok) {
+      const bookingsData = await bookingsResponse.json();
+      setBookings(bookingsData);
+    }
+
+  } catch (error) {
+    console.error('Error fetching customer data:', error);
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to load dashboard data"
+    });
+  }
+};
+
+const handleBookWorker = async (workerId: string) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/jobs`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        workerId,
+        title: 'New Job Request',
+        description: 'Job request from customer',
+        status: 'pending'
+      })
+    });
+
+    if (response.ok) {
+      toast({
+        title: "Success!",
+        description: "Worker booked successfully"
+      });
+      fetchCustomerData();
+    }
+  } catch (error) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to book worker"
+    });
+  }
+};
   const services = [
     { name: "Plumber", icon: Wrench },
     { name: "Electrician", icon: Zap },
