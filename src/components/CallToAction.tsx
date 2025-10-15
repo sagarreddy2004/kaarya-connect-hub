@@ -19,7 +19,7 @@ const CallToAction = () => {
         
         <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12">
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" variant="worker" asChild className="min-w-[200px] bg-white text-primary hover:bg-white/90">
+            <Button size="lg" variant="worker" asChild className="min-w-[200px] bg-white/10 text-primary border-blue-500 hover:bg-white/90">
               <Link to="/signup-worker">
                 Start as Worker
                 <ArrowRight size={20} className="ml-2" />
